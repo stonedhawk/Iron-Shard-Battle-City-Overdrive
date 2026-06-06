@@ -1379,16 +1379,39 @@ export class GameEngine {
           quadX = Math.max(0, Math.min(1, quadX));
           quadY = Math.max(0, Math.min(1, quadY));
 
-          if (tile.quadrants[quadY][quadX]) {
-            tile.quadrants[quadY][quadX] = false;
+          let targetX = quadX;
+          let targetY = quadY;
+          let hit = false;
+
+          if (tile.quadrants[targetY][targetX]) {
+            hit = true;
+          } else {
+            // If the primary quadrant is already destroyed, check the adjacent quadrant along the alignment boundary
+            if (b.direction === Direction.UP || b.direction === Direction.DOWN) {
+              // Vertically moving bullets can hit the other horizontal quadrant in the same row
+              if (tile.quadrants[targetY][1 - targetX]) {
+                targetX = 1 - targetX;
+                hit = true;
+              }
+            } else if (b.direction === Direction.LEFT || b.direction === Direction.RIGHT) {
+              // Horizontally moving bullets can hit the other vertical quadrant in the same col
+              if (tile.quadrants[1 - targetY][targetX]) {
+                targetY = 1 - targetY;
+                hit = true;
+              }
+            }
+          }
+
+          if (hit) {
+            tile.quadrants[targetY][targetX] = false;
             mapAltered = true;
 
             // Spawn SILICON loot with 25% probability
             if (b.owner === 'PLAYER' && Math.random() < 0.25) {
               const tileX = col * 32;
               const tileY = row * 32;
-              const qx = tileX + quadX * 16 + 8;
-              const qy = tileY + quadY * 16 + 8;
+              const qx = tileX + targetX * 16 + 8;
+              const qy = tileY + targetY * 16 + 8;
               this.spawnDropItem(qx, qy, 'SILICON');
             }
 
