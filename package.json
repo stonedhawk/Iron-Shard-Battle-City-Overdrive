@@ -1,0 +1,16 @@
+{
+  "name": "iron-shard-battle-city-overdrive",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "typescript": "~6.0.2",
+    "vite": "^8.0.12"
+  }
+}
