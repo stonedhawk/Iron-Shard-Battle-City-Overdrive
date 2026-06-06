@@ -1359,56 +1359,80 @@ export class GameEngine {
         if (hitEnemy) continue;
       }
 
-      // Grid collision
-      const col = Math.floor(b.x / 32);
-      const row = Math.floor(b.y / 32);
+      // Grid collision using bullet bounding box
+      const bLeft = b.x - b.radius;
+      const bRight = b.x + b.radius;
+      const bTop = b.y - b.radius;
+      const bBottom = b.y + b.radius;
 
-      if (row >= 0 && row < 13 && col >= 0 && col < 13) {
-        const tile = this.state.grid[row][col];
+      const startCol = Math.max(0, Math.floor(bLeft / 32));
+      const endCol = Math.min(12, Math.floor(bRight / 32));
+      const startRow = Math.max(0, Math.floor(bTop / 32));
+      const endRow = Math.min(12, Math.floor(bBottom / 32));
 
-        if (tile.type === TileType.STEEL) {
-          // Steel triggers flak too
-          if (b.owner === 'PLAYER' && this.state.player.proximityFlak) {
-            this.triggerFlakExplosion(b.x, b.y);
-          }
-          b.active = false;
-        } 
-        else if (tile.type === TileType.BRICK) {
-          const tileX = col * 32;
-          const tileY = row * 32;
-          
-          const qc = Math.max(0, Math.min(1, Math.floor((b.x - tileX) / 16)));
-          const qr = Math.max(0, Math.min(1, Math.floor((b.y - tileY) / 16)));
-          if (tile.quadrants[qr][qc]) {
-            tile.quadrants[qr][qc] = false;
-            mapAltered = true;
+      let hitRegistered = false;
 
-            // Spawn SILICON loot with 25% probability
-            if (b.owner === 'PLAYER' && Math.random() < 0.25) {
-              const qx = tileX + qc * 16 + 8;
-              const qy = tileY + qr * 16 + 8;
-              this.spawnDropItem(qx, qy, 'SILICON');
-            }
+      for (let r = startRow; r <= endRow && !hitRegistered; r++) {
+        for (let c = startCol; c <= endCol && !hitRegistered; c++) {
+          const tile = this.state.grid[r][c];
 
-            const anyLeft = tile.quadrants[0][0] || tile.quadrants[0][1] || tile.quadrants[1][0] || tile.quadrants[1][1];
-            if (!anyLeft) {
-              tile.type = TileType.EMPTY;
-            }
-
-            // Flak explodes
+          if (tile.type === TileType.STEEL) {
             if (b.owner === 'PLAYER' && this.state.player.proximityFlak) {
               this.triggerFlakExplosion(b.x, b.y);
-              b.active = false;
             }
-            // Piercing allows going through 1 brick (stops at 2nd)
-            else if (b.owner === 'PLAYER' && this.state.player.kineticPiercing) {
-              if (b.penetrationCount === undefined) b.penetrationCount = 0;
-              b.penetrationCount++;
-              if (b.penetrationCount >= 2) {
-                b.active = false;
+            b.active = false;
+            hitRegistered = true;
+          } 
+          else if (tile.type === TileType.BRICK) {
+            const tileX = c * 32;
+            const tileY = r * 32;
+
+            for (let qr = 0; qr < 2; qr++) {
+              for (let qc = 0; qc < 2; qc++) {
+                if (tile.quadrants[qr][qc]) {
+                  const ql = tileX + qc * 16;
+                  const qrBound = ql + 16;
+                  const qt = tileY + qr * 16;
+                  const qb = qt + 16;
+
+                  // Check overlap between bullet bounding box and quadrant
+                  if (bLeft < qrBound && bRight > ql && bTop < qb && bBottom > qt) {
+                    tile.quadrants[qr][qc] = false;
+                    mapAltered = true;
+
+                    // Spawn SILICON loot with 25% probability
+                    if (b.owner === 'PLAYER' && Math.random() < 0.25) {
+                      const qx = ql + 8;
+                      const qy = qt + 8;
+                      this.spawnDropItem(qx, qy, 'SILICON');
+                    }
+
+                    const anyLeft = tile.quadrants[0][0] || tile.quadrants[0][1] || tile.quadrants[1][0] || tile.quadrants[1][1];
+                    if (!anyLeft) {
+                      tile.type = TileType.EMPTY;
+                    }
+
+                    // Flak explodes
+                    if (b.owner === 'PLAYER' && this.state.player.proximityFlak) {
+                      this.triggerFlakExplosion(b.x, b.y);
+                      b.active = false;
+                    }
+                    // Piercing allows going through 1 brick (stops at 2nd)
+                    else if (b.owner === 'PLAYER' && this.state.player.kineticPiercing) {
+                      if (b.penetrationCount === undefined) b.penetrationCount = 0;
+                      b.penetrationCount++;
+                      if (b.penetrationCount >= 2) {
+                        b.active = false;
+                      }
+                    } else {
+                      b.active = false;
+                    }
+                    hitRegistered = true;
+                    break;
+                  }
+                }
               }
-            } else {
-              b.active = false;
+              if (hitRegistered) break;
             }
           }
         }
