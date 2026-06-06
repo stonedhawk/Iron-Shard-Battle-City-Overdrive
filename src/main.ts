@@ -271,6 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     engine.start();
+    (window as any).gameEngine = engine;
 
     // Clean up engine loop when window unloads
     window.addEventListener('beforeunload', () => {

@@ -1373,28 +1373,26 @@ export class GameEngine {
           b.active = false;
         } 
         else if (tile.type === TileType.BRICK) {
-          let quadX = Math.floor((b.x % 32) / 16);
-          let quadY = Math.floor((b.y % 32) / 16);
+          let qX = Math.floor((b.x % 32) / 16);
+          let qY = Math.floor((b.y % 32) / 16);
           
-          quadX = Math.max(0, Math.min(1, quadX));
-          quadY = Math.max(0, Math.min(1, quadY));
+          qX = Math.max(0, Math.min(1, qX));
+          qY = Math.max(0, Math.min(1, qY));
 
-          let targetX = quadX;
-          let targetY = quadY;
+          let targetX = qX;
+          let targetY = qY;
           let hit = false;
 
           if (tile.quadrants[targetY][targetX]) {
             hit = true;
           } else {
-            // If the primary quadrant is already destroyed, check the adjacent quadrant along the alignment boundary
+            // Check adjacent quadrant along the alignment boundary if primary is already destroyed
             if (b.direction === Direction.UP || b.direction === Direction.DOWN) {
-              // Vertically moving bullets can hit the other horizontal quadrant in the same row
               if (tile.quadrants[targetY][1 - targetX]) {
                 targetX = 1 - targetX;
                 hit = true;
               }
             } else if (b.direction === Direction.LEFT || b.direction === Direction.RIGHT) {
-              // Horizontally moving bullets can hit the other vertical quadrant in the same col
               if (tile.quadrants[1 - targetY][targetX]) {
                 targetY = 1 - targetY;
                 hit = true;
@@ -1420,13 +1418,11 @@ export class GameEngine {
               tile.type = TileType.EMPTY;
             }
 
-            // Flak explodes
+            // Upgrades / deactivation logic
             if (b.owner === 'PLAYER' && this.state.player.proximityFlak) {
               this.triggerFlakExplosion(b.x, b.y);
               b.active = false;
-            }
-            // Piercing allows going through 1 brick (stops at 2nd)
-            else if (b.owner === 'PLAYER' && this.state.player.kineticPiercing) {
+            } else if (b.owner === 'PLAYER' && this.state.player.kineticPiercing) {
               if (b.penetrationCount === undefined) b.penetrationCount = 0;
               b.penetrationCount++;
               if (b.penetrationCount >= 2) {
@@ -1626,22 +1622,8 @@ export class GameEngine {
             if (tile.quadrants[qr][qc]) {
               const qx = x + qc * 16;
               const qy = y + qr * 16;
-              
-              ctx.fillStyle = '#b91c1c';
-              ctx.fillRect(qx, qy, 16, 16);
-              
               ctx.fillStyle = '#ef4444';
-              ctx.fillRect(qx, qy, 16, 2);
-              ctx.fillRect(qx, qy + 8, 16, 2);
-              
-              ctx.fillStyle = '#450a0a';
-              ctx.fillRect(qx + 8, qy, 2, 8);
-              ctx.fillRect(qx + 4, qy + 8, 2, 8);
-              ctx.fillRect(qx + 12, qy + 8, 2, 8);
-              
-              ctx.fillStyle = '#7f1d1d';
-              ctx.fillRect(qx, qy + 14, 16, 2);
-              ctx.fillRect(qx + 14, qy, 2, 16);
+              ctx.fillRect(qx, qy, 16, 16);
             }
           }
         }
