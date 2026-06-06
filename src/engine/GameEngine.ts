@@ -1377,41 +1377,38 @@ export class GameEngine {
           const tileX = col * 32;
           const tileY = row * 32;
           
-          const qc = Math.floor((b.x - tileX) / 16);
-          const qr = Math.floor((b.y - tileY) / 16);
-          
-          if (qc >= 0 && qc < 2 && qr >= 0 && qr < 2) {
-            if (tile.quadrants[qr][qc]) {
-              tile.quadrants[qr][qc] = false;
-              mapAltered = true;
+          const qc = Math.max(0, Math.min(1, Math.floor((b.x - tileX) / 16)));
+          const qr = Math.max(0, Math.min(1, Math.floor((b.y - tileY) / 16)));
+          if (tile.quadrants[qr][qc]) {
+            tile.quadrants[qr][qc] = false;
+            mapAltered = true;
 
-              // Spawn SILICON loot with 25% probability
-              if (b.owner === 'PLAYER' && Math.random() < 0.25) {
-                const qx = tileX + qc * 16 + 8;
-                const qy = tileY + qr * 16 + 8;
-                this.spawnDropItem(qx, qy, 'SILICON');
-              }
+            // Spawn SILICON loot with 25% probability
+            if (b.owner === 'PLAYER' && Math.random() < 0.25) {
+              const qx = tileX + qc * 16 + 8;
+              const qy = tileY + qr * 16 + 8;
+              this.spawnDropItem(qx, qy, 'SILICON');
+            }
 
-              const anyLeft = tile.quadrants[0][0] || tile.quadrants[0][1] || tile.quadrants[1][0] || tile.quadrants[1][1];
-              if (!anyLeft) {
-                tile.type = TileType.EMPTY;
-              }
+            const anyLeft = tile.quadrants[0][0] || tile.quadrants[0][1] || tile.quadrants[1][0] || tile.quadrants[1][1];
+            if (!anyLeft) {
+              tile.type = TileType.EMPTY;
+            }
 
-              // Flak explodes
-              if (b.owner === 'PLAYER' && this.state.player.proximityFlak) {
-                this.triggerFlakExplosion(b.x, b.y);
+            // Flak explodes
+            if (b.owner === 'PLAYER' && this.state.player.proximityFlak) {
+              this.triggerFlakExplosion(b.x, b.y);
+              b.active = false;
+            }
+            // Piercing allows going through 1 brick (stops at 2nd)
+            else if (b.owner === 'PLAYER' && this.state.player.kineticPiercing) {
+              if (b.penetrationCount === undefined) b.penetrationCount = 0;
+              b.penetrationCount++;
+              if (b.penetrationCount >= 2) {
                 b.active = false;
               }
-              // Piercing allows going through 1 brick (stops at 2nd)
-              else if (b.owner === 'PLAYER' && this.state.player.kineticPiercing) {
-                if (b.penetrationCount === undefined) b.penetrationCount = 0;
-                b.penetrationCount++;
-                if (b.penetrationCount >= 2) {
-                  b.active = false;
-                }
-              } else {
-                b.active = false;
-              }
+            } else {
+              b.active = false;
             }
           }
         }
