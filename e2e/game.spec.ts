@@ -126,4 +126,58 @@ test.describe('Iron Shard: Battle City Overdrive E2E Tests', () => {
     await closeBtn.click();
     await expect(overlay).toHaveClass(/hidden/);
   });
+
+  test('should destroy brick quadrants on bullet collision', async ({ page }) => {
+    await page.waitForFunction(() => (window as any).gameEngine !== undefined);
+
+    const initialTile = await page.evaluate(() => {
+      const engine = (window as any).gameEngine;
+      const tile = engine.state.grid[10][6];
+      return {
+        type: tile.type,
+        quadrants: JSON.parse(JSON.stringify(tile.quadrants))
+      };
+    });
+
+    expect(initialTile.type).toBe('BRICK');
+    expect(initialTile.quadrants[1][1]).toBe(true);
+
+    // Press Space to shoot first bullet
+    await page.keyboard.press('Space');
+    await page.waitForTimeout(300);
+
+    const afterFirst = await page.evaluate(() => {
+      return JSON.parse(JSON.stringify((window as any).gameEngine.state.grid[10][6]));
+    });
+    console.log('After First Shot:', afterFirst);
+
+    // Press Space to shoot second bullet
+    await page.keyboard.press('Space');
+    await page.waitForTimeout(300);
+
+    const afterSecond = await page.evaluate(() => {
+      return JSON.parse(JSON.stringify((window as any).gameEngine.state.grid[10][6]));
+    });
+    console.log('After Second Shot:', afterSecond);
+
+    // Press Space to shoot third bullet (targets next row of quadrants)
+    await page.keyboard.press('Space');
+    await page.waitForTimeout(300);
+
+    const afterThird = await page.evaluate(() => {
+      return JSON.parse(JSON.stringify((window as any).gameEngine.state.grid[10][6]));
+    });
+    console.log('After Third Shot:', afterThird);
+
+    // Press Space to shoot fourth bullet
+    await page.keyboard.press('Space');
+    await page.waitForTimeout(300);
+
+    const afterFourth = await page.evaluate(() => {
+      return JSON.parse(JSON.stringify((window as any).gameEngine.state.grid[10][6]));
+    });
+    console.log('After Fourth Shot:', afterFourth);
+
+    expect(afterFourth.type).toBe('EMPTY');
+  });
 });
