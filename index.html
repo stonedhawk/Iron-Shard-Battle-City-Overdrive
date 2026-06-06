@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Iron Shard: Battle City Overdrive - A modern web-native replica and systemic evolution of the classic 8-bit arcade tank combat genre." />
+    <title>Iron Shard: Battle City Overdrive - 8-Bit Retro Tank Combat</title>
+    
+    <!-- Google Fonts for Retro Arcade Vibe -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Outfit:wght@300;400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="app" class="arcade-container">
+      <header class="game-header">
+        <h1 id="game-title" class="logo-text">IRON SHARD</h1>
+        <span class="subtitle-text">BATTLE CITY OVERDRIVE v1.0.0</span>
+      </header>
+
+      <main class="game-layout">
+        <!-- Gameplay HUD Left Panel -->
+        <section id="gameplay-hud-left" class="telemetry-panel left-panel" aria-label="Gameplay HUD Left">
+          <div class="panel-header">SYSTEM STATUS</div>
+          <div class="metric-group">
+            <div class="metric-row">
+              <span class="metric-label">STATUS</span>
+              <span id="metric-status" class="metric-value active-pulse">ONLINE</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">TPS</span>
+              <span id="metric-tick" class="metric-value">60.0 HZ</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">FPS</span>
+              <span id="metric-fps" class="metric-value">00.0 FPS</span>
+            </div>
+          </div>
+
+          <div class="panel-header" style="margin-top: 20px;">STAGE DIAGNOSTICS</div>
+          <div class="metric-group">
+            <div class="metric-row">
+              <span class="metric-label">MATRIX LVL</span>
+              <span id="matrix-level" class="metric-value">01</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">QUEUE</span>
+              <span id="wave-queue" class="metric-value">20</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">KILLS</span>
+              <span id="wave-kills" class="metric-value">00</span>
+            </div>
+          </div>
+
+          <div class="panel-header" style="margin-top: 20px;">HARVEST DATA</div>
+          <div class="metric-group">
+            <div class="metric-row">
+              <span class="metric-label">SILICON SHARDS</span>
+              <span id="res-silicon" class="metric-value res-glow-blue">000</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">FERRO-ALLOYS</span>
+              <span id="res-ferro" class="metric-value res-glow-orange">000</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">KINETIC CORES</span>
+              <span id="res-cores" class="metric-value res-glow-orange" style="color: var(--color-accent-orange)">000</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Main Screen Wrapper -->
+        <section id="screen-viewport-section" class="screen-wrapper" aria-label="Engine Viewport">
+          <div class="screen-frame">
+            <div class="scanlines"></div>
+            <div class="crt-glow"></div>
+            <canvas id="game-canvas" width="416" height="416"></canvas>
+          </div>
+          <div class="control-actions">
+            <button id="btn-restart" class="action-btn" type="button">RESTART GAME</button>
+            <button id="btn-pause" class="action-btn" type="button">PAUSE GAME</button>
+          </div>
+        </section>
+
+        <!-- Gameplay HUD Right Panel -->
+        <section id="gameplay-hud-right" class="telemetry-panel right-panel" aria-label="Gameplay HUD Right">
+          <div class="panel-header">TANK STATUS</div>
+          <div class="metric-group">
+            <div class="metric-row">
+              <span class="metric-label">LIVES</span>
+              <span id="tank-lives" class="metric-value" style="color: var(--color-accent-green)">03</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">COORDS</span>
+              <span id="tank-coords" class="metric-value">X: 06, Y: 11</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">DIR</span>
+              <span id="tank-dir" class="metric-value">UP</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">VELOCITY</span>
+              <span id="tank-speed" class="metric-value">0 PX/S</span>
+            </div>
+          </div>
+
+          <div class="panel-header" style="margin-top: 20px;">CONTROLS</div>
+          <div class="key-grid">
+            <div class="key-cap" id="key-w">W</div>
+            <div class="key-row-bottom">
+              <div class="key-cap" id="key-a">A</div>
+              <div class="key-cap" id="key-s">S</div>
+              <div class="key-cap" id="key-d">D</div>
+            </div>
+          </div>
+          <div class="key-space-row" style="margin-top: 10px;">
+            <div class="key-cap space-cap" id="key-space">SPACE (SHOOT)</div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="game-footer">
+        <p>Use <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> or <kbd>Arrow Keys</kbd> to maneuver. Shoot with <kbd>SPACE</kbd>. Press <kbd>E</kbd> or <kbd>Tab</kbd> to enter the **Upgrade Grid**.</p>
+      </footer>
+    </div>
+
+    <!-- Retro Upgrade Grid overlay -->
+    <div id="upgrade-overlay" class="modal-overlay hidden">
+      <div class="upgrade-modal">
+        <h2 class="modal-title">UPGRADE GRID</h2>
+        <div class="upgrade-cost-bar">
+          <div class="cost-item">SILICON: <span id="modal-silicon" class="res-glow-blue">000</span></div>
+          <div class="cost-item">FERRO: <span id="modal-ferro" class="res-glow-orange">000</span></div>
+          <div class="cost-item">CORE: <span id="modal-core" style="color: var(--color-accent-orange)">000</span></div>
+        </div>
+        <div class="upgrade-options">
+          <button id="btn-upgrade-piercing" class="upgrade-card" type="button">
+            <span class="card-title">KINETIC PIERCING</span>
+            <span class="card-desc">Shells penetrate and destroy up to 2 micro-bricks in a row instead of 1.</span>
+            <span class="card-cost">Cost: 15 Silicon, 2 Ferro</span>
+            <span class="card-status" id="status-piercing">AVAILABLE</span>
+          </button>
+          <button id="btn-upgrade-flak" class="upgrade-card" type="button">
+            <span class="card-title">PROXIMITY FLAK</span>
+            <span class="card-desc">Shell impacts trigger an explosion clearing a 3x3 micro-grid quadrant area.</span>
+            <span class="card-cost">Cost: 25 Silicon, 1 Core</span>
+            <span class="card-status" id="status-flak">AVAILABLE</span>
+          </button>
+          <button id="btn-upgrade-forts" class="upgrade-card" type="button">
+            <span class="card-title">REINFORCE FORTS</span>
+            <span class="card-desc">Reinforce all brick walls guarding the eagle core into indestructible steel.</span>
+            <span class="card-cost">Cost: 5 Ferro</span>
+            <span class="card-status" id="status-forts">AVAILABLE</span>
+          </button>
+          <button id="btn-upgrade-treads" class="upgrade-card" type="button">
+            <span class="card-title">OVERDRIVE TREADS</span>
+            <span class="card-desc">Increase tank movement speed by +0.25 per tier (up to tier 3).</span>
+            <span class="card-cost">Cost: 10 Silicon, 1 Ferro</span>
+            <span class="card-status" id="status-treads">AVAILABLE</span>
+          </button>
+          <button id="btn-upgrade-propellant" class="upgrade-card" type="button">
+            <span class="card-title">HYPER-VELOCITY PROPELLANT</span>
+            <span class="card-desc">Increase bullet speed by +2.0 per tier (up to tier 3).</span>
+            <span class="card-cost">Cost: 12 Silicon, 1 Ferro</span>
+            <span class="card-status" id="status-propellant">AVAILABLE</span>
+          </button>
+        </div>
+        <button id="btn-close-upgrade" class="close-btn" type="button">RESUME COMBAT</button>
+      </div>
+    </div>
+    
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
