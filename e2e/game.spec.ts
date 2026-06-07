@@ -180,4 +180,45 @@ test.describe('Iron Shard: Battle City Overdrive E2E Tests', () => {
 
     expect(afterFourth.type).toBe('EMPTY');
   });
+
+  test('should display HUD quick-buy prompt and complete purchase on hotkey press', async ({ page }) => {
+    await page.waitForFunction(() => (window as any).gameEngine !== undefined);
+
+    // 1. Initially, no prompt should be visible
+    const promptSelector = '.hud-upgrade-prompt';
+    await expect(page.locator(promptSelector)).toHaveCount(0);
+
+    // 2. Programmatically add resources for Tread upgrade (10 silicon, 1 ferro)
+    await page.evaluate(() => {
+      const engine = (window as any).gameEngine;
+      engine.state.resources.siliconShards = 10;
+      engine.state.resources.ferroAlloys = 1;
+    });
+
+    // 3. Prompt should become visible
+    const prompt = page.locator(promptSelector);
+    await expect(prompt).toBeVisible();
+    await expect(prompt).toContainText('[1] OVERDRIVE TREADS');
+
+    // 4. Press '1' to purchase
+    await page.keyboard.press('1');
+    await page.waitForTimeout(100);
+
+    // 5. Verify resource deduction and tread tier increase
+    const state = await page.evaluate(() => {
+      const engine = (window as any).gameEngine;
+      return {
+        silicon: engine.state.resources.siliconShards,
+        ferro: engine.state.resources.ferroAlloys,
+        treadTier: engine.state.player.treadTier
+      };
+    });
+
+    expect(state.silicon).toBe(0);
+    expect(state.ferro).toBe(0);
+    expect(state.treadTier).toBe(1);
+
+    // 6. Prompt should now be hidden
+    await expect(page.locator(promptSelector)).toHaveCount(0);
+  });
 });

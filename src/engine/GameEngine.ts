@@ -458,25 +458,31 @@ export class GameEngine {
   public buyUpgrade(type: 'piercing' | 'flak' | 'forts' | 'treads' | 'propellant'): boolean {
     const r = this.state.resources;
     const p = this.state.player;
+    let purchased = false;
+    let label = '';
 
     if (type === 'piercing' && !p.kineticPiercing) {
       if (r.siliconShards >= 15 && r.ferroAlloys >= 2) {
         r.siliconShards -= 15;
         r.ferroAlloys -= 2;
         p.kineticPiercing = true;
-        return true;
+        purchased = true;
+        label = 'PIERCING UNLOCKED';
       }
     } else if (type === 'flak' && !p.proximityFlak) {
       if (r.siliconShards >= 25 && r.kineticCores >= 1) {
         r.siliconShards -= 25;
         r.kineticCores -= 1;
         p.proximityFlak = true;
-        return true;
+        purchased = true;
+        label = 'FLAK UNLOCKED';
       }
     } else if (type === 'forts' && !p.baseReinforced) {
       if (r.ferroAlloys >= 5) {
         r.ferroAlloys -= 5;
         p.baseReinforced = true;
+        purchased = true;
+        label = 'BASE REINFORCED';
         
         // Transform base brick fortresses into STEEL
         const fortCoords = [
@@ -496,7 +502,6 @@ export class GameEngine {
         }
         
         this.recalculateStaticFlowFields();
-        return true;
       }
     } else if (type === 'treads') {
       const currentTier = p.treadTier || 0;
@@ -504,7 +509,8 @@ export class GameEngine {
         r.siliconShards -= 10;
         r.ferroAlloys -= 1;
         p.treadTier = currentTier + 1;
-        return true;
+        purchased = true;
+        label = `TREADS TIER ${p.treadTier}`;
       }
     } else if (type === 'propellant') {
       const currentTier = p.propellantTier || 0;
@@ -512,9 +518,22 @@ export class GameEngine {
         r.siliconShards -= 12;
         r.ferroAlloys -= 1;
         p.propellantTier = currentTier + 1;
-        return true;
+        purchased = true;
+        label = `PROPELLANT TIER ${p.propellantTier}`;
       }
     }
+
+    if (purchased) {
+      this.state.floatingTexts.push({
+        id: Math.random().toString(36).substring(2, 9),
+        x: p.x + p.width / 2,
+        y: p.y - 10,
+        text: label,
+        timer: 60
+      });
+      return true;
+    }
+
     return false;
   }
 
@@ -718,14 +737,51 @@ export class GameEngine {
         currentSpeed = currentSpeed * 1.5;
       }
 
-      const nextX = p.x + dx * currentSpeed;
-      const nextY = p.y + dy * currentSpeed;
+      let nextX = p.x + dx * currentSpeed;
+      let nextY = p.y + dy * currentSpeed;
 
-      if (!this.checkCollisionForTank('player', nextX, nextY, p.width, p.height)) {
-        p.x = nextX;
-        p.y = nextY;
-      } else {
+      if (this.checkTileAndBoundsCollision(nextX, nextY, p.width, p.height)) {
         p.isMoving = false;
+      } else {
+        let vx = dx * currentSpeed;
+        let vy = dy * currentSpeed;
+        let collidedWithTank = false;
+
+        for (const enemy of this.state.activeEnemies) {
+          if (enemy.spawnTimer > 0) continue;
+          const nextXProj = p.x + vx;
+          const nextYProj = p.y + vy;
+
+          if (this.rectsOverlap(nextXProj, nextYProj, p.width, p.height, enemy.x, enemy.y, enemy.width, enemy.height)) {
+            const currOverlap = this.getOverlapArea(p.x, p.y, p.width, p.height, enemy.x, enemy.y, enemy.width, enemy.height);
+            const nextOverlap = this.getOverlapArea(nextXProj, nextYProj, p.width, p.height, enemy.x, enemy.y, enemy.width, enemy.height);
+
+            if (currOverlap > 0 && nextOverlap < currOverlap) {
+              // Backing away reduces overlap, allow it
+              continue;
+            }
+
+            collidedWithTank = true;
+
+            // Safety separation push if already interpenetrating
+            if (currOverlap > 0) {
+              if (dy < 0) p.y += 1;
+              else if (dy > 0) p.y -= 1;
+              else if (dx < 0) p.x += 1;
+              else if (dx > 0) p.x -= 1;
+            }
+
+            if (vx !== 0) vx = 0;
+            if (vy !== 0) vy = 0;
+          }
+        }
+
+        if (!collidedWithTank || vx !== 0 || vy !== 0) {
+          p.x += vx;
+          p.y += vy;
+        } else {
+          p.isMoving = false;
+        }
       }
     } else {
       p.isMoving = false;
@@ -748,7 +804,13 @@ export class GameEngine {
     return x1 < x2 + w2 && x1 + w1 > x2 && y1 < y2 + h2 && y1 + h1 > y2;
   }
 
-  private checkCollisionForTank(tankId: string, x: number, y: number, width: number, height: number): boolean {
+  private getOverlapArea(x1: number, y1: number, w1: number, h1: number, x2: number, y2: number, w2: number, h2: number): number {
+    const overlapX = Math.max(0, Math.min(x1 + w1, x2 + w2) - Math.max(x1, x2));
+    const overlapY = Math.max(0, Math.min(y1 + h1, y2 + h2) - Math.max(y1, y2));
+    return overlapX * overlapY;
+  }
+
+  private checkTileAndBoundsCollision(x: number, y: number, width: number, height: number): boolean {
     const left = x;
     const right = x + width;
     const top = y;
@@ -798,10 +860,18 @@ export class GameEngine {
       }
     }
 
+    return false;
+  }
+
+  private checkCollisionForTank(tankId: string, x: number, y: number, width: number, height: number): boolean {
+    if (this.checkTileAndBoundsCollision(x, y, width, height)) {
+      return true;
+    }
+
     // Check player overlap (if it's not the player)
     const p = this.state.player;
     if (tankId !== 'player') {
-      if (p.lives >= 0 && this.rectsOverlap(left, top, width, height, p.x, p.y, p.width, p.height)) {
+      if (p.lives >= 0 && this.rectsOverlap(x, y, width, height, p.x, p.y, p.width, p.height)) {
         return true;
       }
     }
@@ -809,7 +879,7 @@ export class GameEngine {
     // Check active enemies (that are fully spawned)
     for (const enemy of this.state.activeEnemies) {
       if (enemy.id === tankId || enemy.spawnTimer > 0) continue;
-      if (this.rectsOverlap(left, top, width, height, enemy.x, enemy.y, enemy.width, enemy.height)) {
+      if (this.rectsOverlap(x, y, width, height, enemy.x, enemy.y, enemy.width, enemy.height)) {
         return true;
       }
     }
@@ -1020,14 +1090,87 @@ export class GameEngine {
     const nextX = enemy.x + dx * speed;
     const nextY = enemy.y + dy * speed;
 
-    const collided = this.checkCollisionForTank(enemy.id, nextX, nextY, enemy.width, enemy.height);
+    let collided = false;
+    let pushX = 0;
+    let pushY = 0;
 
-    if (!collided) {
-      enemy.x = nextX;
-      enemy.y = nextY;
-      enemy.isMoving = true;
-      enemy.blockedTimer = 0;
+    if (this.checkTileAndBoundsCollision(nextX, nextY, enemy.width, enemy.height)) {
+      collided = true;
     } else {
+      let vx = dx * speed;
+      let vy = dy * speed;
+      let collidedWithTank = false;
+
+      // Check against player
+      const p = this.state.player;
+      if (p.lives >= 0) {
+        const nextXProj = enemy.x + vx;
+        const nextYProj = enemy.y + vy;
+        if (this.rectsOverlap(nextXProj, nextYProj, enemy.width, enemy.height, p.x, p.y, p.width, p.height)) {
+          const currOverlap = this.getOverlapArea(enemy.x, enemy.y, enemy.width, enemy.height, p.x, p.y, p.width, p.height);
+          const nextOverlap = this.getOverlapArea(nextXProj, nextYProj, enemy.width, enemy.height, p.x, p.y, p.width, p.height);
+
+          if (currOverlap > 0 && nextOverlap < currOverlap) {
+            // Backing away reduces overlap, allow it
+          } else {
+            collidedWithTank = true;
+
+            // Safety separation push if already interpenetrating
+            if (currOverlap > 0) {
+              if (dy < 0) pushY = 1;
+              else if (dy > 0) pushY = -1;
+              else if (dx < 0) pushX = 1;
+              else if (dx > 0) pushX = -1;
+            }
+
+            if (vx !== 0) vx = 0;
+            if (vy !== 0) vy = 0;
+          }
+        }
+      }
+
+      // Check against other enemies
+      for (const other of this.state.activeEnemies) {
+        if (other.id === enemy.id || other.spawnTimer > 0) continue;
+        const nextXProj = enemy.x + vx;
+        const nextYProj = enemy.y + vy;
+        if (this.rectsOverlap(nextXProj, nextYProj, enemy.width, enemy.height, other.x, other.y, other.width, other.height)) {
+          const currOverlap = this.getOverlapArea(enemy.x, enemy.y, enemy.width, enemy.height, other.x, other.y, other.width, other.height);
+          const nextOverlap = this.getOverlapArea(nextXProj, nextYProj, enemy.width, enemy.height, other.x, other.y, other.width, other.height);
+
+          if (currOverlap > 0 && nextOverlap < currOverlap) {
+            // Backing away reduces overlap, allow it
+          } else {
+            collidedWithTank = true;
+
+            // Safety separation push if already interpenetrating
+            if (currOverlap > 0) {
+              if (dy < 0) pushY = 1;
+              else if (dy > 0) pushY = -1;
+              else if (dx < 0) pushX = 1;
+              else if (dx > 0) pushX = -1;
+            }
+
+            if (vx !== 0) vx = 0;
+            if (vy !== 0) vy = 0;
+          }
+        }
+      }
+
+      if (pushX !== 0) enemy.x += pushX;
+      if (pushY !== 0) enemy.y += pushY;
+
+      if (!collidedWithTank || vx !== 0 || vy !== 0) {
+        enemy.x += vx;
+        enemy.y += vy;
+        enemy.isMoving = true;
+        enemy.blockedTimer = 0;
+      } else {
+        collided = true;
+      }
+    }
+
+    if (collided) {
       enemy.isMoving = false;
       
       // HEAVY specific blast trigger on brick collision

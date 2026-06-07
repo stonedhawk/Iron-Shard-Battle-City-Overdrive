@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const queueEl = document.getElementById('wave-queue');
   const killsEl = document.getElementById('wave-kills');
   const levelEl = document.getElementById('matrix-level');
+  const hudUpgradeContainer = document.getElementById('hud-upgrade-prompts');
 
   // Upgrade Modal elements
   const overlayEl = document.getElementById('upgrade-overlay');
@@ -99,6 +100,37 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (levelEl) {
       levelEl.innerText = padZero(state.currentLevel, 2);
+    }
+
+    // 5. Update Quick-Buy Prompts
+    if (hudUpgradeContainer) {
+      const r = state.resources;
+      const prompts: string[] = [];
+
+      // Check treads
+      if ((p.treadTier || 0) < 3 && r.siliconShards >= 10 && r.ferroAlloys >= 1) {
+        prompts.push(`<div class="hud-upgrade-prompt">[1] OVERDRIVE TREADS AVAILABLE</div>`);
+      }
+      // Check propellant
+      if ((p.propellantTier || 0) < 3 && r.siliconShards >= 12 && r.ferroAlloys >= 1) {
+        prompts.push(`<div class="hud-upgrade-prompt">[2] HYPER PROPELLANT AVAILABLE</div>`);
+      }
+      // Check flak
+      if (!p.proximityFlak && r.siliconShards >= 25 && r.kineticCores >= 1) {
+        prompts.push(`<div class="hud-upgrade-prompt cores-upgrade">[3] PROXIMITY FLAK AVAILABLE</div>`);
+      }
+      // Check reinforce forts (reinforced base)
+      if (!p.baseReinforced && r.ferroAlloys >= 5) {
+        prompts.push(`<div class="hud-upgrade-prompt forts-upgrade">[3] REINFORCE BASE AVAILABLE</div>`);
+      }
+
+      if (prompts.length > 0 && state.gamePhase === 'PLAYING') {
+        hudUpgradeContainer.innerHTML = prompts.join('');
+        hudUpgradeContainer.classList.remove('hidden');
+      } else {
+        hudUpgradeContainer.innerHTML = '';
+        hudUpgradeContainer.classList.add('hidden');
+      }
     }
   };
 
@@ -195,6 +227,37 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'e' || e.key === 'E' || e.key === 'Tab') {
       e.preventDefault();
       toggleStore(!isStoreOpen);
+      return;
+    }
+
+    if (engine && engine.getGameState().gamePhase === 'PLAYING') {
+      const state = engine.getGameState();
+      const r = state.resources;
+      const p = state.player;
+
+      if (e.key === '1') {
+        const canAfford = r.siliconShards >= 10 && r.ferroAlloys >= 1;
+        if (canAfford && (p.treadTier || 0) < 3) {
+          engine.buyUpgrade('treads');
+          updateStoreUI();
+        }
+      } else if (e.key === '2') {
+        const canAfford = r.siliconShards >= 12 && r.ferroAlloys >= 1;
+        if (canAfford && (p.propellantTier || 0) < 3) {
+          engine.buyUpgrade('propellant');
+          updateStoreUI();
+        }
+      } else if (e.key === '3') {
+        const canAffordFlak = r.siliconShards >= 25 && r.kineticCores >= 1;
+        const canAffordForts = r.ferroAlloys >= 5;
+        if (!p.proximityFlak && canAffordFlak) {
+          engine.buyUpgrade('flak');
+          updateStoreUI();
+        } else if (!p.baseReinforced && canAffordForts) {
+          engine.buyUpgrade('forts');
+          updateStoreUI();
+        }
+      }
     }
   });
 
