@@ -525,3 +525,63 @@ body {
     width: 100%;
   }
 }
+
+/* Real-Time HUD Upgrade Prompts */
+.hud-upgrade-container {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 10;
+  pointer-events: none;
+}
+.hud-upgrade-prompt {
+  background: rgba(9, 10, 15, 0.9);
+  border: 1.5px solid var(--color-accent-green);
+  color: var(--color-accent-green);
+  padding: 6px 10px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  border-radius: 4px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  animation: pulseNeon 1.5s infinite alternate;
+}
+.hud-upgrade-prompt.cores-upgrade {
+  border-color: var(--color-accent-orange);
+  color: var(--color-accent-orange);
+  animation: pulseNeonOrange 1.5s infinite alternate;
+}
+.hud-upgrade-prompt.forts-upgrade {
+  border-color: var(--color-accent-cyan);
+  color: var(--color-accent-cyan);
+  animation: pulseNeonCyan 1.5s infinite alternate;
+}
+
+@keyframes pulseNeon {
+  from {
+    box-shadow: 0 0 5px rgba(57, 255, 20, 0.3);
+  }
+  to {
+    box-shadow: 0 0 15px rgba(57, 255, 20, 0.6);
+  }
+}
+@keyframes pulseNeonOrange {
+  from {
+    box-shadow: 0 0 5px rgba(255, 94, 54, 0.3);
+  }
+  to {
+    box-shadow: 0 0 15px rgba(255, 94, 54, 0.6);
+  }
+}
+@keyframes pulseNeonCyan {
+  from {
+    box-shadow: 0 0 5px rgba(0, 242, 254, 0.3);
+  }
+  to {
+    box-shadow: 0 0 15px rgba(0, 242, 254, 0.6);
+  }
+}
